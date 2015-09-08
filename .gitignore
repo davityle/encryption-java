@@ -1,0 +1,11 @@
+*.iml
+
+## Directory-based project format:
+.idea/
+
+/out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+*.class
