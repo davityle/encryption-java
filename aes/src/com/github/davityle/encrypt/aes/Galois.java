@@ -18,11 +18,12 @@ public class Galois {
     }
 
     private static byte xTime(byte b) {
-        byte overflow = (byte)(b & 0x80);
+        boolean overflow = (b & 0x80) == 0x80;
         b <<= 1;
-        if(overflow == (byte) 0x80)
-            b ^= 0x1b;
-        return b;
+        if(overflow)
+            return (byte) (b ^ 0x1b);
+        else
+            return b;
     }
 
     private static boolean hasBit(byte b, int position) {
