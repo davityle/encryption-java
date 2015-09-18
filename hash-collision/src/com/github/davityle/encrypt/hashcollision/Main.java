@@ -1,11 +1,10 @@
 package com.github.davityle.encrypt.hashcollision;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class Main {
 
@@ -20,44 +19,73 @@ public class Main {
     }
 
     public static void main(String arg[]) {
-        String original = UUID.randomUUID().toString();
-        System.out.println(original);
-        System.out.println(findCollision(encrypt24bit(original)));
-        System.out.println(findCollision(getUserHash()));
+        findAnyCollision(Main::encrypt8bit);
+        findAnyCollision(Main::encrypt16bit);
+        findAnyCollision(Main::encrypt24bit);
+        findAnyCollision(Main::encrypt32bit);
+        findCollision(UUID.randomUUID().toString(), Main::encrypt24bit);
     }
 
-    private static String findCollision(int initial) {
+    private static void findAnyCollision(Function<String, Integer> encrypt) {
+        long startTime = System.currentTimeMillis();
+        HashMap<Integer, String> map = new HashMap<>();
         String collision;
-        int count = 0;
+        int count = 0, hash;
+        while(true){
+            collision = UUID.randomUUID().toString();
+            count++;
+            hash = encrypt.apply(collision);
+            if(map.containsKey(hash)) {
+                break;
+            }
+            map.put(hash, collision);
+        }
+        long endTime = System.currentTimeMillis();
+        System.out.println(map.get(hash));
+        System.out.println(collision);
+        System.out.println(Integer.toHexString(hash));
+        System.out.println(count);
+        System.out.println(endTime - startTime);
+    }
+
+    private static void findCollision(String initial, Function<String, Integer> encrypt) {
+        long startTime = System.currentTimeMillis();
+        String collision;
+        int count = 0, hash = encrypt.apply(initial);
         do {
             collision = UUID.randomUUID().toString();
             count++;
-        } while (initial != encrypt24bit(collision));
+        } while (hash != encrypt.apply(collision));
+        long endTime = System.currentTimeMillis();
+        System.out.println(initial);
+        System.out.println(collision);
         System.out.println(count);
-        return collision;
+        System.out.println(endTime - startTime);
+    }
+
+    private static byte[] encrypt(String x) {
+        sha1.reset();
+        sha1.update(x.getBytes());
+        return sha1.digest();
+    }
+
+    // it would've been simpler to make each of these with a loop
+    private static int encrypt8bit(String x) {
+        return encrypt(x)[0] & 0xff;
+    }
+
+    private static int encrypt16bit(String x) {
+        byte[] bytes = encrypt(x);
+        return (((bytes[0] & 0xff) <<  8) | (bytes[1] & 0xff)) & 0x0000ffff;
     }
 
     private static int encrypt24bit(String x) {
-        sha1.reset();
-        sha1.update(x.getBytes());
-        byte[] bytes = sha1.digest();
+        byte[] bytes = encrypt(x);
         return (((bytes[0] & 0xff) << 16) | ((bytes[1] & 0xff) <<  8) | (bytes[2] & 0xff)) & 0x00ffffff;
     }
 
-
-    private static int getUserHash() {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.print("Enter Hex Hash value: ");
-        try {
-            return Integer.parseInt(br.readLine().trim(), 16);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                br.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    private static int encrypt32bit(String x) {
+        byte[] bytes = encrypt(x);
+        return (((bytes[0] & 0xff) << 24) | ((bytes[1] & 0xff) <<  16) | ((bytes[2] & 0xff) << 8) | ((bytes[3] & 0xff))) ;
     }
 }
